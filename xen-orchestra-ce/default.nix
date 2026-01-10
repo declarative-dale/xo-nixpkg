@@ -33,10 +33,7 @@
 , zlib
 , fuse3
 
-# Flake-style input (for development)
-, xoSrc ? null
-
-# Nixpkgs-style parameters (for submission)
+# Source parameters
 , xoSrcRev ? "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b"
 , xoSrcHash ? "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
@@ -46,21 +43,16 @@
 , ...
 }:
 
-let
-  # Use flake input if provided, otherwise fetch from GitHub
-  actualSrc = if xoSrc != null then xoSrc else fetchFromGitHub {
+stdenv.mkDerivation rec {
+  pname = "xen-orchestra-ce";
+  version = "unstable-${builtins.substring 0 8 xoSrcRev}";
+
+  src = fetchFromGitHub {
     owner = "vatesfr";
     repo = "xen-orchestra";
     rev = xoSrcRev;
     hash = xoSrcHash;
   };
-in
-
-stdenv.mkDerivation rec {
-  pname = "xen-orchestra-ce";
-  version = "unstable-${builtins.substring 0 8 (if xoSrc != null then xoSrc.rev else xoSrcRev)}";
-
-  src = actualSrc;
 
   # Fixed-output offline mirror for Yarn.
   # Update the hash with: nix build .#xen-orchestra-ce (then replace with actual hash).
@@ -226,8 +218,8 @@ WRAPPER
     logallrefupdates = true
 GITCONFIG
 
-      # Detached HEAD with the pinned flake revision
-      echo "${if xoSrc != null then xoSrc.rev else xoSrcRev}" > .git/HEAD
+      # Detached HEAD with the pinned revision
+      echo "${xoSrcRev}" > .git/HEAD
 
       # Sanity check: verify git rev-parse works
       git rev-parse --short HEAD

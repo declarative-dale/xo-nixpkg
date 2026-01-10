@@ -63,31 +63,34 @@ mkdir -p pkgs/by-name/li/libvhdi
    ```
 
 2. **Edit package.nix**:
-   - Remove dual-mode logic (the `if xoSrc != null` conditionals)
-   - Remove `xoSrc ? null` parameter
-   - Use only `fetchFromGitHub` with hardcoded rev and hash
+   - Remove default parameter values (the `? "..."` parts)
+   - Update to use actual commit hash and source hash
    - Update maintainers list with your GitHub username
 
-   Example transformation:
+   Example changes:
    ```nix
-   # Before (dual-mode):
+   # Current (with defaults):
    { lib, stdenv, fetchFromGitHub, ...
-   , xoSrc ? null
-   , xoSrcRev ? "..."
-   , xoSrcHash ? "..."
+   , xoSrcRev ? "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b"
+   , xoSrcHash ? "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+   , ...
    }:
-   let
-     actualSrc = if xoSrc != null then xoSrc else fetchFromGitHub { ... };
-   in
-   stdenv.mkDerivation {
-     src = actualSrc;
+   stdenv.mkDerivation rec {
+     pname = "xen-orchestra-ce";
+     version = "unstable-${builtins.substring 0 8 xoSrcRev}";
+     src = fetchFromGitHub {
+       owner = "vatesfr";
+       repo = "xen-orchestra";
+       rev = xoSrcRev;
+       hash = xoSrcHash;
+     };
      ...
    }
 
-   # After (nixpkgs):
+   # For nixpkgs (remove defaults, hardcode values):
    { lib, stdenv, fetchFromGitHub, ...
    }:
-   stdenv.mkDerivation {
+   stdenv.mkDerivation rec {
      pname = "xen-orchestra-ce";
      version = "unstable-2026-01-10";  # Use actual date
 
@@ -105,6 +108,8 @@ mkdir -p pkgs/by-name/li/libvhdi
    }
    ```
 
+   **Note**: The package is already in pure nixpkgs form - the flake.nix handles development mode by overriding `src`. You just need to remove the default parameters and hardcode the values.
+
 #### For libvhdi
 
 1. **Copy file**:
@@ -113,10 +118,11 @@ mkdir -p pkgs/by-name/li/libvhdi
    ```
 
 2. **Edit package.nix**:
-   - Remove dual-mode logic
-   - Remove `libvhdiSrc ? null` and related parameters
-   - Use only `fetchurl` with hardcoded version and hash
+   - Remove default parameter values (the `? "..."` parts)
+   - Update to use actual version and source hash
    - Update maintainers list
+
+   The package is already in pure nixpkgs form - just remove the defaults and hardcode values.
 
 ### Step 4: Add Yourself to Maintainers List (if not already present)
 

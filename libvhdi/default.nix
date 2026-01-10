@@ -16,27 +16,19 @@
 , fuse3
 , zlib
 
-# Flake-style input (for development)
-, libvhdiSrc ? null
-
-# Nixpkgs-style parameters (for submission)
+# Source parameters
 , version ? "20240509"
 , srcHash ? "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 }:
-
-let
-  # Use flake input if provided, otherwise fetch from URL
-  actualSrc = if libvhdiSrc != null then libvhdiSrc else fetchurl {
-    url = "https://github.com/libyal/libvhdi/releases/download/${version}/libvhdi-alpha-${version}.tar.gz";
-    hash = srcHash;
-  };
-in
 
 stdenv.mkDerivation {
   pname = "libvhdi";
   inherit version;
 
-  src = actualSrc;
+  src = fetchurl {
+    url = "https://github.com/libyal/libvhdi/releases/download/${version}/libvhdi-alpha-${version}.tar.gz";
+    hash = srcHash;
+  };
 
   nativeBuildInputs = [
     autoreconfHook

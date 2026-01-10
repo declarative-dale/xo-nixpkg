@@ -29,18 +29,27 @@
         in
         {
           # Development versions using flake inputs
-          xen-orchestra-ce = pkgs.callPackage ./xen-orchestra-ce {
-            inherit xoSrc;
-          };
+          # Override src to use pre-fetched flake inputs instead of fetchFromGitHub
+          xen-orchestra-ce = (pkgs.callPackage ./xen-orchestra-ce {
+            xoSrcRev = xoSrc.rev;
+            # Placeholder hash - will be overridden by src below
+            xoSrcHash = "sha256-0000000000000000000000000000000000000000000=";
+          }).overrideAttrs (old: {
+            src = xoSrc;
+          });
 
-          libvhdi = pkgs.callPackage ./libvhdi {
-            inherit libvhdiSrc;
-          };
+          libvhdi = (pkgs.callPackage ./libvhdi {
+            version = "20240509";
+            # Placeholder hash - will be overridden by src below
+            srcHash = "sha256-0000000000000000000000000000000000000000000=";
+          }).overrideAttrs (old: {
+            src = libvhdiSrc;
+          });
 
           default = self.packages.${system}.xen-orchestra-ce;
 
           # Test versions using fetchFromGitHub/fetchurl (as they would work in nixpkgs)
-          # These test the dual-mode functionality without flake inputs
+          # These build exactly as they would in nixpkgs, fetching sources themselves
           xen-orchestra-ce-nixpkgs-test = pkgs.callPackage ./xen-orchestra-ce {
             xoSrcRev = "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b";
             # Note: This hash needs to be obtained via nix-prefetch-github

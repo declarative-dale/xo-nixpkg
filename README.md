@@ -132,15 +132,25 @@ nix build .#libvhdi
 
 ## Architecture
 
-This repository uses a **dual-mode** approach:
+This repository keeps **package definitions pure** while the **flake handles development flexibility**:
 
-- **Development mode**: Packages accept flake inputs (`xoSrc`, `libvhdiSrc`)
-- **Nixpkgs mode**: Packages accept traditional parameters (`xoSrcRev`/`xoSrcHash`, `version`/`srcHash`)
+- **Package files (`default.nix`)**: Pure nixpkgs-style packages that use `fetchFromGitHub`/`fetchurl`
+- **Flake (`flake.nix`)**: Handles both modes by overriding `src` for development builds
 
-This allows:
-1. Fast iteration during development using flake inputs
-2. Testing exact nixpkgs submission behavior before creating PRs
-3. Single source of truth (one `default.nix` per package)
+**Development mode** (in `flake.nix`):
+- Calls packages with placeholder parameters
+- Overrides `src` with pre-fetched flake inputs
+- Fast iteration, no re-fetching
+
+**Nixpkgs-test mode** (in `flake.nix`):
+- Calls packages with actual rev/hash parameters
+- Packages fetch sources themselves (just like in nixpkgs)
+- Tests exact submission behavior
+
+This approach ensures:
+1. `default.nix` files are exactly as they'll appear in nixpkgs
+2. No flake-specific logic in package definitions
+3. Flake provides development ergonomics without polluting packages
 
 ## Relationship to NiXOA Core
 
