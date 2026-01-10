@@ -17,34 +17,48 @@
     };
   };
 
-  outputs = { self, nixpkgs, xoSrc, libvhdiSrc }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      xoSrc,
+      libvhdiSrc,
+    }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" ];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in
     {
-      packages = forAllSystems (system:
+      packages = forAllSystems (
+        system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
           # Development versions using flake inputs
           # Override src to use pre-fetched flake inputs instead of fetchFromGitHub
-          xen-orchestra-ce = (pkgs.callPackage ./xen-orchestra-ce {
-            xoSrcRev = xoSrc.rev;
-            # Placeholder hash - will be overridden by src below
-            xoSrcHash = "sha256-0000000000000000000000000000000000000000000=";
-          }).overrideAttrs (old: {
-            src = xoSrc;
-          });
+          xen-orchestra-ce =
+            (pkgs.callPackage ./xen-orchestra-ce {
+              xoSrcRev = xoSrc.rev;
+              # Placeholder hash - will be overridden by src below
+              xoSrcHash = "sha256-0000000000000000000000000000000000000000000=";
+            }).overrideAttrs
+              (old: {
+                src = xoSrc;
+              });
 
-          libvhdi = (pkgs.callPackage ./libvhdi {
-            version = "20240509";
-            # Placeholder hash - will be overridden by src below
-            srcHash = "sha256-0000000000000000000000000000000000000000000=";
-          }).overrideAttrs (old: {
-            src = libvhdiSrc;
-          });
+          libvhdi =
+            (pkgs.callPackage ./libvhdi {
+              version = "20240509";
+              # Placeholder hash - will be overridden by src below
+              srcHash = "sha256-0000000000000000000000000000000000000000000=";
+            }).overrideAttrs
+              (old: {
+                src = libvhdiSrc;
+              });
 
           default = self.packages.${system}.xen-orchestra-ce;
 
@@ -64,7 +78,8 @@
         }
       );
 
-      devShells = forAllSystems (system:
+      devShells = forAllSystems (
+        system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
         in

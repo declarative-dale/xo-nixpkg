@@ -7,18 +7,18 @@
 # pkgs/by-name/li/libvhdi/package.nix
 
 {
-  lib
-, stdenv
-, fetchurl
-, autoreconfHook
-, pkg-config
-, fuse
-, fuse3
-, zlib
+  lib,
+  stdenv,
+  fetchurl,
+  autoreconfHook,
+  pkg-config,
+  fuse,
+  fuse3,
+  zlib,
 
-# Source parameters
-, version ? "20240509"
-, srcHash ? "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  # Source parameters
+  version ? "20240509",
+  srcHash ? "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 }:
 
 stdenv.mkDerivation {

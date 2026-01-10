@@ -15,32 +15,33 @@
 # - In Nix sandboxes, chmod() of those bits can fail (EPERM) due to nosuid.
 # - enableChmodSanitizer makes Node strip those bits during yarn extraction.
 
-{ lib
-, stdenv
-, fetchFromGitHub
-, fetchYarnDeps
-, yarn
-, yarnConfigHook
-, yarnBuildHook
-, writableTmpDirAsHomeHook
-, nodejs_24
-, esbuild
-, git
-, python3
-, pkg-config
-, makeWrapper
-, libpng
-, zlib
-, fuse3
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchYarnDeps,
+  yarn,
+  yarnConfigHook,
+  yarnBuildHook,
+  writableTmpDirAsHomeHook,
+  nodejs_24,
+  esbuild,
+  git,
+  python3,
+  pkg-config,
+  makeWrapper,
+  libpng,
+  zlib,
+  fuse3,
 
-# Source parameters
-, xoSrcRev ? "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b"
-, xoSrcHash ? "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  # Source parameters
+  xoSrcRev ? "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b",
+  xoSrcHash ? "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 
-# Enabled by default; disable if needed by passing `enableChmodSanitizer = false;`.
-, enableChmodSanitizer ? true
-, yarnChmodSanitize ? ./yarn-chmod-sanitize.js
-, ...
+  # Enabled by default; disable if needed by passing `enableChmodSanitizer = false;`.
+  enableChmodSanitizer ? true,
+  yarnChmodSanitize ? ./yarn-chmod-sanitize.js,
+  ...
 }:
 
 stdenv.mkDerivation rec {
@@ -127,53 +128,53 @@ stdenv.mkDerivation rec {
   # In Nix sandboxes, node_modules/.bin shims with #!/usr/bin/env node fail (ENOENT)
   # because /usr/bin/env doesn't exist. These wrappers call ${nodejs_24}/bin/node directly.
   preBuild = ''
-    set -euo pipefail
+        set -euo pipefail
 
-    # Find actual vite/vue-tsc entrypoints by following .bin shims (may be symlinks)
-    vite_target="$(readlink -f node_modules/.bin/vite 2>/dev/null || true)"
-    vue_tsc_target="$(readlink -f node_modules/.bin/vue-tsc 2>/dev/null || true)"
+        # Find actual vite/vue-tsc entrypoints by following .bin shims (may be symlinks)
+        vite_target="$(readlink -f node_modules/.bin/vite 2>/dev/null || true)"
+        vue_tsc_target="$(readlink -f node_modules/.bin/vue-tsc 2>/dev/null || true)"
 
-    if [ -z "$vite_target" ]; then
-      echo "ERROR: Cannot find vite in node_modules/.bin" >&2
-      exit 1
-    fi
-    if [ -z "$vue_tsc_target" ]; then
-      echo "ERROR: Cannot find vue-tsc in node_modules/.bin" >&2
-      exit 1
-    fi
+        if [ -z "$vite_target" ]; then
+          echo "ERROR: Cannot find vite in node_modules/.bin" >&2
+          exit 1
+        fi
+        if [ -z "$vue_tsc_target" ]; then
+          echo "ERROR: Cannot find vue-tsc in node_modules/.bin" >&2
+          exit 1
+        fi
 
-    # Create *real* executables inside the workspace package(s) so Turbo/Yarn scripts can always run them.
-    mkToolWrappers() {
-      local pkg="$1"
-      [ -d "$pkg" ] || return 0
+        # Create *real* executables inside the workspace package(s) so Turbo/Yarn scripts can always run them.
+        mkToolWrappers() {
+          local pkg="$1"
+          [ -d "$pkg" ] || return 0
 
-      mkdir -p "$pkg/node_modules/.bin"
+          mkdir -p "$pkg/node_modules/.bin"
 
-      cat > "$pkg/node_modules/.bin/vite" <<'WRAPPER'
-#!${stdenv.shell}
-exec ${nodejs_24}/bin/node "VITE_TARGET" "$@"
-WRAPPER
-      sed -i 's|VITE_TARGET|'"$vite_target"'|g' "$pkg/node_modules/.bin/vite"
-      chmod +x "$pkg/node_modules/.bin/vite"
+          cat > "$pkg/node_modules/.bin/vite" <<'WRAPPER'
+    #!${stdenv.shell}
+    exec ${nodejs_24}/bin/node "VITE_TARGET" "$@"
+    WRAPPER
+          sed -i 's|VITE_TARGET|'"$vite_target"'|g' "$pkg/node_modules/.bin/vite"
+          chmod +x "$pkg/node_modules/.bin/vite"
 
-      cat > "$pkg/node_modules/.bin/vue-tsc" <<'WRAPPER'
-#!${stdenv.shell}
-exec ${nodejs_24}/bin/node "VUE_TSC_TARGET" "$@"
-WRAPPER
-      sed -i 's|VUE_TSC_TARGET|'"$vue_tsc_target"'|g' "$pkg/node_modules/.bin/vue-tsc"
-      chmod +x "$pkg/node_modules/.bin/vue-tsc"
-    }
+          cat > "$pkg/node_modules/.bin/vue-tsc" <<'WRAPPER'
+    #!${stdenv.shell}
+    exec ${nodejs_24}/bin/node "VUE_TSC_TARGET" "$@"
+    WRAPPER
+          sed -i 's|VUE_TSC_TARGET|'"$vue_tsc_target"'|g' "$pkg/node_modules/.bin/vue-tsc"
+          chmod +x "$pkg/node_modules/.bin/vue-tsc"
+        }
 
-    # Create wrappers in all web packages
-    mkToolWrappers "@xen-orchestra/web"
-    mkToolWrappers "packages/xo-web"
-    mkToolWrappers "xo-web"
+        # Create wrappers in all web packages
+        mkToolWrappers "@xen-orchestra/web"
+        mkToolWrappers "packages/xo-web"
+        mkToolWrappers "xo-web"
 
-    echo "Verifying build tools are now created:"
-    echo "vite target: $vite_target"
-    echo "vue-tsc target: $vue_tsc_target"
-    ls -la "@xen-orchestra/web/node_modules/.bin/vite" || echo "vite wrapper missing"
-    ls -la "@xen-orchestra/web/node_modules/.bin/vue-tsc" || echo "vue-tsc wrapper missing"
+        echo "Verifying build tools are now created:"
+        echo "vite target: $vite_target"
+        echo "vue-tsc target: $vue_tsc_target"
+        ls -la "@xen-orchestra/web/node_modules/.bin/vite" || echo "vite wrapper missing"
+        ls -la "@xen-orchestra/web/node_modules/.bin/vue-tsc" || echo "vue-tsc wrapper missing"
   '';
 
   # Build phase: run yarn with wrappers in place.
@@ -187,43 +188,43 @@ WRAPPER
   # Conditional patching: only patches if file exists and has expected pattern.
   # This makes updates to xoSrc.rev survive upstream fixes without breaking the build.
   postPatch = ''
-    # Patch 1: SMB handler needs createReadStream
-    if [ -f packages/xo-server/src/xo-mixins/storage/smb.js ] \
-      && grep -q "const { join } = require('path')" packages/xo-server/src/xo-mixins/storage/smb.js; then
-      substituteInPlace packages/xo-server/src/xo-mixins/storage/smb.js \
-        --replace-fail "const { join } = require('path')" \
-                       "const { join } = require('path'); const { createReadStream } = require('fs')"
-    fi
+        # Patch 1: SMB handler needs createReadStream
+        if [ -f packages/xo-server/src/xo-mixins/storage/smb.js ] \
+          && grep -q "const { join } = require('path')" packages/xo-server/src/xo-mixins/storage/smb.js; then
+          substituteInPlace packages/xo-server/src/xo-mixins/storage/smb.js \
+            --replace-fail "const { join } = require('path')" \
+                           "const { join } = require('path'); const { createReadStream } = require('fs')"
+        fi
 
-    # Patch 2: Fix missing createReadStream import in FS module
-    if [ -f @xen-orchestra/fs/src/index.js ] \
-      && grep -q "const { asyncIterableToStream }" @xen-orchestra/fs/src/index.js \
-      && ! grep -q "createReadStream" @xen-orchestra/fs/src/index.js; then
-      substituteInPlace @xen-orchestra/fs/src/index.js \
-        --replace-fail "const { asyncIterableToStream } = require('./_asyncIterableToStream')" \
-                       "const { createReadStream } = require('node:fs');\nconst { asyncIterableToStream } = require('./_asyncIterableToStream')"
-    fi
+        # Patch 2: Fix missing createReadStream import in FS module
+        if [ -f @xen-orchestra/fs/src/index.js ] \
+          && grep -q "const { asyncIterableToStream }" @xen-orchestra/fs/src/index.js \
+          && ! grep -q "createReadStream" @xen-orchestra/fs/src/index.js; then
+          substituteInPlace @xen-orchestra/fs/src/index.js \
+            --replace-fail "const { asyncIterableToStream } = require('./_asyncIterableToStream')" \
+                           "const { createReadStream } = require('node:fs');\nconst { asyncIterableToStream } = require('./_asyncIterableToStream')"
+        fi
 
-    # Patch 3: Create minimal .git directory so git rev-parse --short HEAD works.
-    # XO's xo-server Babel config calls git to get the commit hash.
-    # Flake sources are tarball checkouts without .git/, so create one with our pinned rev.
-    if [ ! -e .git ]; then
-      mkdir -p .git/objects .git/refs
+        # Patch 3: Create minimal .git directory so git rev-parse --short HEAD works.
+        # XO's xo-server Babel config calls git to get the commit hash.
+        # Flake sources are tarball checkouts without .git/, so create one with our pinned rev.
+        if [ ! -e .git ]; then
+          mkdir -p .git/objects .git/refs
 
-      cat > .git/config <<'GITCONFIG'
-[core]
-    repositoryformatversion = 0
-    filemode = true
-    bare = false
-    logallrefupdates = true
-GITCONFIG
+          cat > .git/config <<'GITCONFIG'
+    [core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+        logallrefupdates = true
+    GITCONFIG
 
-      # Detached HEAD with the pinned revision
-      echo "${xoSrcRev}" > .git/HEAD
+          # Detached HEAD with the pinned revision
+          echo "${xoSrcRev}" > .git/HEAD
 
-      # Sanity check: verify git rev-parse works
-      git rev-parse --short HEAD
-    fi
+          # Sanity check: verify git rev-parse works
+          git rev-parse --short HEAD
+        fi
   '';
 
   # yarnConfigHook runs the yarn install using the offline cache.

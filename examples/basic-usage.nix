@@ -9,55 +9,67 @@
     xo-ce-nix.url = "github:YOUR-USER/xen-orchestra-ce-nix";
   };
 
-  outputs = { self, nixpkgs, xo-ce-nix }: {
-    nixosConfigurations.example = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      modules = [
-        ({config, pkgs, ... }: {
-          # Install packages
-          environment.systemPackages = [
-            xo-ce-nix.packages.x86_64-linux.xen-orchestra-ce
-            xo-ce-nix.packages.x86_64-linux.libvhdi
-          ];
+  outputs =
+    {
+      self,
+      nixpkgs,
+      xo-ce-nix,
+    }:
+    {
+      nixosConfigurations.example = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          (
+            { config, pkgs, ... }:
+            {
+              # Install packages
+              environment.systemPackages = [
+                xo-ce-nix.packages.x86_64-linux.xen-orchestra-ce
+                xo-ce-nix.packages.x86_64-linux.libvhdi
+              ];
 
-          # Example: Basic xo-server systemd service
-          # Note: This is a minimal example. For production use, see NiXOA modules.
-          systemd.services.xo-server = {
-            description = "Xen Orchestra Server";
-            wantedBy = [ "multi-user.target" ];
-            after = [ "network.target" "redis.service" ];
-            requires = [ "redis.service" ];
+              # Example: Basic xo-server systemd service
+              # Note: This is a minimal example. For production use, see NiXOA modules.
+              systemd.services.xo-server = {
+                description = "Xen Orchestra Server";
+                wantedBy = [ "multi-user.target" ];
+                after = [
+                  "network.target"
+                  "redis.service"
+                ];
+                requires = [ "redis.service" ];
 
-            serviceConfig = {
-              Type = "simple";
-              ExecStart = "${xo-ce-nix.packages.x86_64-linux.xen-orchestra-ce}/bin/xo-server";
-              Restart = "on-failure";
-              User = "xo";
-              Group = "xo";
-              WorkingDirectory = "/var/lib/xo";
-              StateDirectory = "xo";
-            };
-          };
+                serviceConfig = {
+                  Type = "simple";
+                  ExecStart = "${xo-ce-nix.packages.x86_64-linux.xen-orchestra-ce}/bin/xo-server";
+                  Restart = "on-failure";
+                  User = "xo";
+                  Group = "xo";
+                  WorkingDirectory = "/var/lib/xo";
+                  StateDirectory = "xo";
+                };
+              };
 
-          # Required: Redis for xo-server
-          services.redis.servers.xo = {
-            enable = true;
-            port = 6379;
-          };
+              # Required: Redis for xo-server
+              services.redis.servers.xo = {
+                enable = true;
+                port = 6379;
+              };
 
-          # Create xo user
-          users.users.xo = {
-            isSystemUser = true;
-            group = "xo";
-            home = "/var/lib/xo";
-          };
-          users.groups.xo = {};
+              # Create xo user
+              users.users.xo = {
+                isSystemUser = true;
+                group = "xo";
+                home = "/var/lib/xo";
+              };
+              users.groups.xo = { };
 
-          # Example: Using libvhdi tools
-          # The libvhdi package provides vhdiinfo, vhdimount, and vhdiexport
-          # These are available in the system PATH when the package is installed
-        })
-      ];
+              # Example: Using libvhdi tools
+              # The libvhdi package provides vhdiinfo, vhdimount, and vhdiexport
+              # These are available in the system PATH when the package is installed
+            }
+          )
+        ];
+      };
     };
-  };
 }
