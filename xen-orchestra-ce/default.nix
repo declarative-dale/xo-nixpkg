@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Xen Orchestra Community Edition (XO-CE) — deterministic Yarn v1 build.
 #
+# This file is structured for nixpkgs submission.
+# When submitting to nixpkgs, it will be placed at:
+# pkgs/by-name/xe/xen-orchestra-ce/package.nix
+#
 # Why this structure:
 # - Xen Orchestra uses a Yarn v1 workspace monorepo.
 # - Nixpkgs provides fetchYarnDeps + yarn{Config,Build}Hook for Yarn v1.
@@ -13,6 +17,7 @@
 
 { lib
 , stdenv
+, fetchFromGitHub
 , fetchYarnDeps
 , yarn
 , yarnConfigHook
@@ -28,7 +33,12 @@
 , zlib
 , fuse3
 
-, xoSrc
+# Flake-style input (for development)
+, xoSrc ? null
+
+# Nixpkgs-style parameters (for submission)
+, xoSrcRev ? "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b"
+, xoSrcHash ? "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 # Enabled by default; disable if needed by passing `enableChmodSanitizer = false;`.
 , enableChmodSanitizer ? true
@@ -36,11 +46,21 @@
 , ...
 }:
 
+let
+  # Use flake input if provided, otherwise fetch from GitHub
+  actualSrc = if xoSrc != null then xoSrc else fetchFromGitHub {
+    owner = "vatesfr";
+    repo = "xen-orchestra";
+    rev = xoSrcRev;
+    hash = xoSrcHash;
+  };
+in
+
 stdenv.mkDerivation rec {
   pname = "xen-orchestra-ce";
-  version = "unstable-${builtins.substring 0 8 xoSrc.rev}";
+  version = "unstable-${builtins.substring 0 8 (if xoSrc != null then xoSrc.rev else xoSrcRev)}";
 
-  src = xoSrc;
+  src = actualSrc;
 
   # Fixed-output offline mirror for Yarn.
   # Update the hash with: nix build .#xen-orchestra-ce (then replace with actual hash).
@@ -207,7 +227,7 @@ WRAPPER
 GITCONFIG
 
       # Detached HEAD with the pinned flake revision
-      echo "${xoSrc.rev}" > .git/HEAD
+      echo "${if xoSrc != null then xoSrc.rev else xoSrcRev}" > .git/HEAD
 
       # Sanity check: verify git rev-parse works
       git rev-parse --short HEAD
@@ -263,5 +283,8 @@ GITCONFIG
     license = licenses.agpl3Only;
     platforms = platforms.linux;
     mainProgram = "xo-server";
+    maintainers = with maintainers; [
+      # Add your GitHub username here when submitting to nixpkgs
+    ];
   };
 }
