@@ -1,0 +1,209 @@
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchYarnDeps,
+  yarn,
+  yarnConfigHook,
+  yarnBuildHook,
+  writableTmpDirAsHomeHook,
+  nodejs_24,
+  esbuild,
+  git,
+  python3,
+  pkg-config,
+  makeWrapper,
+  libpng,
+  zlib,
+  fuse3,
+  enableChmodSanitizer ? true,
+}:
+
+let
+  # Helper script to sanitize chmod calls that fail in Nix sandbox
+  # Some npm packages ship files with setuid/setgid bits which cause EPERM
+  yarnChmodSanitize = ./yarn-chmod-sanitize.js;
+in
+stdenv.mkDerivation (finalAttrs: {
+  pname = "xen-orchestra-ce";
+  version = "6.0.3";
+
+  # Xen Orchestra doesn't use git tags for releases; versions are indicated
+  # in commit messages. This commit corresponds to "feat: release 6.0.3".
+  src = fetchFromGitHub {
+    owner = "vatesfr";
+    repo = "xen-orchestra";
+    rev = "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b";
+    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  };
+
+  yarnOfflineCache = fetchYarnDeps {
+    yarnLock = "${finalAttrs.src}/yarn.lock";
+    hash = "sha256-3vt/oIJ3JF2+0lGftq1IKckKoWVA1qNZZsl/bhRQ4Eo=";
+  };
+
+  nativeBuildInputs = [
+    writableTmpDirAsHomeHook
+    yarn
+    yarnConfigHook
+    yarnBuildHook
+    nodejs_24
+    esbuild
+    git
+    python3
+    pkg-config
+    makeWrapper
+  ];
+
+  buildInputs = [
+    fuse3
+    zlib
+    libpng
+    stdenv.cc.cc.lib
+  ];
+
+  env = {
+    HUSKY = "0";
+    CI = "1";
+    YARN_PRODUCTION = "false";
+    NPM_CONFIG_PRODUCTION = "false";
+  };
+
+  NODE_OPTIONS = lib.optionalString enableChmodSanitizer "--require ${yarnChmodSanitize}";
+
+  yarnInstallFlags = [
+    "--offline"
+    "--frozen-lockfile"
+    "--non-interactive"
+    "--ignore-engines"
+    "--production=false"
+  ];
+
+  yarnFlags = finalAttrs.yarnInstallFlags;
+
+  postPatch = ''
+    # Patch SMB handler to include missing createReadStream import
+    if [ -f packages/xo-server/src/xo-mixins/storage/smb.js ] \
+      && grep -q "const { join } = require('path')" packages/xo-server/src/xo-mixins/storage/smb.js; then
+      substituteInPlace packages/xo-server/src/xo-mixins/storage/smb.js \
+        --replace-fail "const { join } = require('path')" \
+                       "const { join } = require('path'); const { createReadStream } = require('fs')"
+    fi
+
+    # Fix missing createReadStream import in FS module
+    if [ -f @xen-orchestra/fs/src/index.js ] \
+      && grep -q "const { asyncIterableToStream }" @xen-orchestra/fs/src/index.js \
+      && ! grep -q "createReadStream" @xen-orchestra/fs/src/index.js; then
+      substituteInPlace @xen-orchestra/fs/src/index.js \
+        --replace-fail "const { asyncIterableToStream } = require('./_asyncIterableToStream')" \
+                       "const { createReadStream } = require('node:fs');\nconst { asyncIterableToStream } = require('./_asyncIterableToStream')"
+    fi
+
+    # Create minimal .git directory for git rev-parse during build
+    if [ ! -e .git ]; then
+      mkdir -p .git/objects .git/refs
+      cat > .git/config <<EOF
+    [core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+    EOF
+      echo "${finalAttrs.src.rev}" > .git/HEAD
+    fi
+  '';
+
+  postConfigure = ''
+    patchShebangs node_modules
+  '';
+
+  preBuild = ''
+    set -euo pipefail
+
+    vite_target="$(readlink -f node_modules/.bin/vite 2>/dev/null || true)"
+    vue_tsc_target="$(readlink -f node_modules/.bin/vue-tsc 2>/dev/null || true)"
+
+    if [ -z "$vite_target" ]; then
+      echo "ERROR: Cannot find vite in node_modules/.bin" >&2
+      exit 1
+    fi
+    if [ -z "$vue_tsc_target" ]; then
+      echo "ERROR: Cannot find vue-tsc in node_modules/.bin" >&2
+      exit 1
+    fi
+
+    mkToolWrappers() {
+      local pkg="$1"
+      [ -d "$pkg" ] || return 0
+
+      mkdir -p "$pkg/node_modules/.bin"
+
+      cat > "$pkg/node_modules/.bin/vite" <<WRAPPER
+    #!${stdenv.shell}
+    exec ${nodejs_24}/bin/node "$vite_target" "\$@"
+    WRAPPER
+      chmod +x "$pkg/node_modules/.bin/vite"
+
+      cat > "$pkg/node_modules/.bin/vue-tsc" <<WRAPPER
+    #!${stdenv.shell}
+    exec ${nodejs_24}/bin/node "$vue_tsc_target" "\$@"
+    WRAPPER
+      chmod +x "$pkg/node_modules/.bin/vue-tsc"
+    }
+
+    mkToolWrappers "@xen-orchestra/web"
+    mkToolWrappers "packages/xo-web"
+    mkToolWrappers "xo-web"
+  '';
+
+  buildPhase = ''
+    runHook preBuild
+    TURBO_CONCURRENCY=1 yarn --offline run build
+    runHook postBuild
+  '';
+
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/libexec/xen-orchestra
+    mkdir -p $out/bin
+
+    cp -a packages node_modules package.json yarn.lock $out/libexec/xen-orchestra/
+
+    for dir in @xen-orchestra @vates scripts; do
+      if [ -d "$dir" ]; then
+        cp -a "$dir" $out/libexec/xen-orchestra/
+      fi
+    done
+
+    makeWrapper ${nodejs_24}/bin/node $out/bin/xo-server \
+      --chdir $out/libexec/xen-orchestra \
+      --add-flags "packages/xo-server/bin/xo-server"
+
+    runHook postInstall
+  '';
+
+  preFixup = ''
+    find "$out/libexec/xen-orchestra" -xtype l -delete || true
+  '';
+
+  passthru.updateScript = ./update.sh;
+
+  meta = {
+    description = "Web interface for Xen Orchestra - XenServer/XCP-ng management";
+    longDescription = ''
+      Xen Orchestra provides a web-based interface for managing XenServer and
+      XCP-ng infrastructure. It offers VM lifecycle management, backup solutions,
+      continuous replication, and disaster recovery features.
+
+      This package builds the Community Edition from source.
+    '';
+    homepage = "https://xen-orchestra.com";
+    changelog = "https://github.com/vatesfr/xen-orchestra/commits/master";
+    license = lib.licenses.agpl3Only;
+    maintainers = with lib.maintainers; [
+      # Add maintainer here
+    ];
+    platforms = lib.platforms.linux;
+    mainProgram = "xo-server";
+  };
+})

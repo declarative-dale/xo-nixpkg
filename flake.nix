@@ -1,35 +1,18 @@
-# SPDX-License-Identifier: Apache-2.0
 {
   description = "Xen Orchestra CE and libvhdi packages for NixOS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
-    # Source inputs for development/testing
-    xoSrc = {
-      url = "github:vatesfr/xen-orchestra/9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b";
-      flake = false;
-    };
-
-    libvhdiSrc = {
-      url = "https://github.com/libyal/libvhdi/releases/download/20240509/libvhdi-alpha-20240509.tar.gz";
-      flake = false;
-    };
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      xoSrc,
-      libvhdiSrc,
-    }:
+    { self, nixpkgs }:
     let
-      systems = [
+      supportedSystems = [
         "x86_64-linux"
         "aarch64-linux"
       ];
-      forAllSystems = nixpkgs.lib.genAttrs systems;
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
       packages = forAllSystems (
@@ -38,43 +21,9 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
-          # Development versions using flake inputs
-          # Override src to use pre-fetched flake inputs instead of fetchFromGitHub
-          xen-orchestra-ce =
-            (pkgs.callPackage ./xen-orchestra-ce {
-              xoSrcRev = xoSrc.rev;
-              # Placeholder hash - will be overridden by src below
-              xoSrcHash = "sha256-0000000000000000000000000000000000000000000=";
-            }).overrideAttrs
-              (old: {
-                src = xoSrc;
-              });
-
-          libvhdi =
-            (pkgs.callPackage ./libvhdi {
-              version = "20240509";
-              # Placeholder hash - will be overridden by src below
-              srcHash = "sha256-0000000000000000000000000000000000000000000=";
-            }).overrideAttrs
-              (old: {
-                src = libvhdiSrc;
-              });
-
+          xen-orchestra-ce = pkgs.callPackage ./xen-orchestra-ce/package.nix { };
+          libvhdi = pkgs.callPackage ./libvhdi/package.nix { };
           default = self.packages.${system}.xen-orchestra-ce;
-
-          # Test versions using fetchFromGitHub/fetchurl (as they would work in nixpkgs)
-          # These build exactly as they would in nixpkgs, fetching sources themselves
-          xen-orchestra-ce-nixpkgs-test = pkgs.callPackage ./xen-orchestra-ce {
-            xoSrcRev = "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b";
-            # Note: This hash needs to be obtained via nix-prefetch-github
-            xoSrcHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-          };
-
-          libvhdi-nixpkgs-test = pkgs.callPackage ./libvhdi {
-            version = "20240509";
-            # Note: This hash needs to be obtained via nix-prefetch-url
-            srcHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-          };
         }
       );
 
@@ -85,47 +34,33 @@
         in
         {
           default = pkgs.mkShell {
-            name = "xen-orchestra-ce-nix-dev";
+            name = "xen-orchestra-ce-dev";
             packages = with pkgs; [
               nix-prefetch-github
-              nix-prefetch-url
-              nixpkgs-fmt
-              nixpkgs-review
+              nix-prefetch
+              nixfmt
+              nix-update
               git
               jq
             ];
             shellHook = ''
-              echo "xen-orchestra-ce-nix development shell"
-              echo "========================================"
+              echo "Xen Orchestra CE development shell"
               echo ""
-              echo "Available packages:"
-              echo "  - xen-orchestra-ce         (development build with flake inputs)"
-              echo "  - libvhdi                  (development build with flake inputs)"
-              echo "  - xen-orchestra-ce-nixpkgs-test  (nixpkgs-style build)"
-              echo "  - libvhdi-nixpkgs-test           (nixpkgs-style build)"
-              echo ""
-              echo "Useful commands:"
+              echo "Build packages:"
               echo "  nix build .#xen-orchestra-ce"
               echo "  nix build .#libvhdi"
-              echo "  nix build .#xen-orchestra-ce-nixpkgs-test"
-              echo "  nix build .#libvhdi-nixpkgs-test"
-              echo "  nix flake check"
               echo ""
               echo "Update source hashes:"
-              echo "  nix-prefetch-github vatesfr xen-orchestra --rev <commit-hash>"
+              echo "  nix-prefetch-github vatesfr xen-orchestra --rev v<version>"
               echo "  nix-prefetch-url https://github.com/libyal/libvhdi/releases/download/<version>/libvhdi-alpha-<version>.tar.gz"
             '';
           };
         }
       );
 
-      # Checks for CI - ensure all package variants build successfully
       checks = forAllSystems (system: {
-        xen-orchestra-ce-builds = self.packages.${system}.xen-orchestra-ce;
-        libvhdi-builds = self.packages.${system}.libvhdi;
-        # Note: nixpkgs-test variants commented out until hashes are updated
-        # xen-orchestra-ce-nixpkgs = self.packages.${system}.xen-orchestra-ce-nixpkgs-test;
-        # libvhdi-nixpkgs = self.packages.${system}.libvhdi-nixpkgs-test;
+        xen-orchestra-ce = self.packages.${system}.xen-orchestra-ce;
+        libvhdi = self.packages.${system}.libvhdi;
       });
     };
 }
