@@ -34,7 +34,7 @@ stdenv.mkDerivation (finalAttrs: {
     owner = "vatesfr";
     repo = "xen-orchestra";
     rev = "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b";
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    hash = "sha256-JF1X2900gg6ZjKNflEddG5XucUa+P5ExD3fki+BEPR8=";
   };
 
   yarnOfflineCache = fetchYarnDeps {
