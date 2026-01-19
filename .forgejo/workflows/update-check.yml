@@ -1,0 +1,107 @@
+name: Check for XO updates
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Check for new XO release
+        id: check
+        run: |
+          # Get current version from package.nix
+          current_version=$(grep 'version = ' xen-orchestra-ce/package.nix | sed 's/.*version = "\([^"]*\)".*/\1/')
+          current_rev=$(grep "rev = " xen-orchestra-ce/package.nix | sed 's/.*rev = "\([^"]*\)".*/\1/')
+
+          echo "Current version: $current_version"
+          echo "Current rev: $current_rev"
+
+          # Search for latest release commit (feat: release X.Y.Z)
+          latest_info=$(curl -s "https://api.github.com/repos/vatesfr/xen-orchestra/commits?per_page=100" | \
+            jq -r '[.[] | select(.commit.message | test("^feat: release [0-9]+\\.[0-9]+\\.[0-9]+"))] | first | {sha: .sha, message: .commit.message}')
+
+          if [ "$latest_info" = "null" ] || [ -z "$latest_info" ]; then
+            echo "No release commit found"
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          latest_sha=$(echo "$latest_info" | jq -r '.sha')
+          latest_msg=$(echo "$latest_info" | jq -r '.message')
+          latest_version=$(echo "$latest_msg" | sed -n 's/^feat: release \([0-9.]*\).*/\1/p')
+
+          echo "Latest version: $latest_version"
+          echo "Latest sha: $latest_sha"
+
+          if [ "$current_rev" = "$latest_sha" ]; then
+            echo "Already up to date"
+            echo "update_available=false" >> $GITHUB_OUTPUT
+          else
+            echo "Update available!"
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$latest_version" >> $GITHUB_OUTPUT
+            echo "new_sha=$latest_sha" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fetch new source hash
+        if: steps.check.outputs.update_available == 'true'
+        id: hash
+        run: |
+          new_hash=$(nix shell nixpkgs#nix-prefetch-github -c \
+            nix-prefetch-github vatesfr xen-orchestra \
+            --rev ${{ steps.check.outputs.new_sha }} | jq -r '.hash')
+          echo "new_hash=$new_hash" >> $GITHUB_OUTPUT
+
+      - name: Update package.nix
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          cd xen-orchestra-ce
+
+          # Update version
+          sed -i 's/version = "[^"]*"/version = "${{ steps.check.outputs.new_version }}"/' package.nix
+
+          # Update rev
+          sed -i 's/rev = "[a-f0-9]*"/rev = "${{ steps.check.outputs.new_sha }}"/' package.nix
+
+          # Update hash (first occurrence after fetchFromGitHub)
+          sed -i '0,/hash = "sha256-[^"]*"/s//hash = "${{ steps.hash.outputs.new_hash }}"/' package.nix
+
+          echo "Updated package.nix:"
+          grep -A5 "src = fetchFromGitHub" package.nix
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          git config user.name "Forgejo Actions"
+          git config user.email "actions@codeberg.org"
+
+          BRANCH="update/xen-orchestra-ce-${{ steps.check.outputs.new_version }}"
+
+          git checkout -b "$BRANCH"
+          git add xen-orchestra-ce/package.nix
+          git commit -m "xen-orchestra-ce: ${{ steps.check.outputs.new_version }}"
+          git push origin "$BRANCH"
+
+          # Create PR via Forgejo API
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.FORGEJO_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "https://codeberg.org/api/v1/repos/dalemorgan/xen-orchestra-ce/pulls" \
+            -d '{
+              "title": "xen-orchestra-ce: update to ${{ steps.check.outputs.new_version }}",
+              "body": "Automated update to xen-orchestra-ce version ${{ steps.check.outputs.new_version }}\n\n**Changes:**\n- Version: ${{ steps.check.outputs.new_version }}\n- Commit: vatesfr/xen-orchestra@${{ steps.check.outputs.new_sha }}\n\n**Note:** The yarn offline cache hash may need manual update if `yarn.lock` changed.",
+              "head": "'"$BRANCH"'",
+              "base": "main"
+            }'
