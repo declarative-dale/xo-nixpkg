@@ -26,20 +26,20 @@ let
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "xen-orchestra-ce";
-  version = "6.0.3";
+  version = "6.1.1";
 
   # Xen Orchestra doesn't use git tags for releases; versions are indicated
   # in commit messages. This commit corresponds to "feat: release 6.0.3".
   src = fetchFromGitHub {
     owner = "vatesfr";
     repo = "xen-orchestra";
-    rev = "9b6d1089f4b96ef07d7ddc25a943c466e8c7bb4b";
-    hash = "sha256-JF1X2900gg6ZjKNflEddG5XucUa+P5ExD3fki+BEPR8=";
+    rev = "91c5d98489b5981917ca0aabc28ac37acd448396";
+    hash = "sha256-EfHMFNdV8+WApDJiy6wyUv38pvlV2HHmqegOe8NUReM=";
   };
 
   yarnOfflineCache = fetchYarnDeps {
     yarnLock = "${finalAttrs.src}/yarn.lock";
-    hash = "sha256-3vt/oIJ3JF2+0lGftq1IKckKoWVA1qNZZsl/bhRQ4Eo=";
+    hash = "sha256-nxvrqgMHUr3kYz7fcHd9Gdw5iy8EB2QjuOi1tkuLo3s=";
   };
 
   nativeBuildInputs = [
