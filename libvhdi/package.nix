@@ -15,7 +15,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   src = fetchurl {
     url = "https://github.com/libyal/libvhdi/releases/download/${finalAttrs.version}/libvhdi-alpha-${finalAttrs.version}.tar.gz";
-    hash = "sha256-nv6+VKeubPi0kQOjoMN1U/PyLXUmMDplSutZ7KWMzsc=";
+    hash = "sha256-AmzEHlBr70M5mQkKd3UZo8tHFRDcNS+kTWhnz2oOeZA=";
   };
 
   nativeBuildInputs = [
