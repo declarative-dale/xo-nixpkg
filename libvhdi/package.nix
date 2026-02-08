@@ -11,11 +11,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "libvhdi";
-  version = "20240509";
+  version = "20251119";
 
   src = fetchurl {
     url = "https://github.com/libyal/libvhdi/releases/download/${finalAttrs.version}/libvhdi-alpha-${finalAttrs.version}.tar.gz";
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    hash = "sha256-nv6+VKeubPi0kQOjoMN1U/PyLXUmMDplSutZ7KWMzsc=";
   };
 
   nativeBuildInputs = [
