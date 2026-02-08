@@ -99,6 +99,15 @@ stdenv.mkDerivation (finalAttrs: {
                        "const { createReadStream } = require('node:fs');\nconst { asyncIterableToStream } = require('./_asyncIterableToStream')"
     fi
 
+    # TypeScript in newer toolchains infers `Object.entries()` values as unknown.
+    # Coerce labels to string for xo-server-openmetrics build compatibility.
+    if [ -f packages/xo-server-openmetrics/src/openmetric-formatter.mts ] \
+      && grep -q "labels\\[key\\] = value" packages/xo-server-openmetrics/src/openmetric-formatter.mts; then
+      substituteInPlace packages/xo-server-openmetrics/src/openmetric-formatter.mts \
+        --replace-fail "labels[key] = value" \
+                       "labels[key] = typeof value === 'string' ? value : String(value)"
+    fi
+
     # Create minimal .git directory for git rev-parse during build
     if [ ! -e .git ]; then
       mkdir -p .git/objects .git/refs
