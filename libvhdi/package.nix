@@ -41,6 +41,10 @@ stdenv.mkDerivation (finalAttrs: {
   enableParallelBuilding = true;
 
   doCheck = true;
+  preCheck = ''
+    patchShebangs tests
+    find tests -maxdepth 1 -type f -name 'test_*.sh' -exec chmod +x {} +
+  '';
 
   passthru.updateScript = ./update.sh;
 
