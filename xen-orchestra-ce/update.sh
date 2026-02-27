@@ -11,7 +11,7 @@ cd "$(dirname "$0")"
 echo "Searching for latest version commit in xen-orchestra..."
 
 # Get recent commits and find the latest version bump
-version_info=$(curl -s "https://api.github.com/repos/vatesfr/xen-orchestra/commits?per_page=100" | \
+version_info=$(curl -fsSL "https://api.github.com/repos/vatesfr/xen-orchestra/commits?per_page=100" | \
     jq -r '.[] | select(.commit.message | test("^feat: release [0-9]+\\.[0-9]+\\.[0-9]+")) | {sha: .sha, message: .commit.message} | @json' | \
     head -1)
 
@@ -32,16 +32,57 @@ echo "Commit: $commit_sha"
 echo "Fetching source hash..."
 new_hash=$(nix-prefetch-github vatesfr xen-orchestra --rev "$commit_sha" | jq -r '.hash')
 
-echo "New hash: $new_hash"
+echo "New source hash: $new_hash"
+
+# Get yarnOfflineCache hash from the new yarn.lock
+echo "Fetching yarnOfflineCache hash..."
+placeholder_hash="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+prefetch_expr=$(cat <<EOF
+let
+  pkgs = import <nixpkgs> {};
+  src = pkgs.fetchFromGitHub {
+    owner = "vatesfr";
+    repo = "xen-orchestra";
+    rev = "$commit_sha";
+    hash = "$new_hash";
+  };
+in
+pkgs.fetchYarnDeps {
+  yarnLock = src + "/yarn.lock";
+  hash = "$placeholder_hash";
+}
+EOF
+)
+
+set +e
+yarn_prefetch_output=$(nix-build --no-out-link -E "$prefetch_expr" 2>&1)
+yarn_prefetch_status=$?
+set -e
+
+if [ "$yarn_prefetch_status" -eq 0 ]; then
+    echo "Unexpectedly resolved yarnOfflineCache with placeholder hash" >&2
+    exit 1
+fi
+
+new_yarn_hash=$(printf '%s\n' "$yarn_prefetch_output" | \
+    sed -n 's/^[[:space:]]*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*/\1/p' | \
+    head -1)
+
+if [ -z "$new_yarn_hash" ]; then
+    echo "Failed to extract yarnOfflineCache hash from nix-build output" >&2
+    echo "$yarn_prefetch_output" >&2
+    exit 1
+fi
+
+echo "New yarn hash: $new_yarn_hash"
 
 # Update package.nix
 sed -i "s/version = \"[^\"]*\"/version = \"$new_version\"/" package.nix
 sed -i "s/rev = \"[a-f0-9]*\"/rev = \"$commit_sha\"/" package.nix
-sed -i "s|hash = \"sha256-[^\"]*\"|hash = \"$new_hash\"|" package.nix
+sed -i "/src = fetchFromGitHub {/,/};/ s|hash = \"sha256-[^\"]*\"|hash = \"$new_hash\"|" package.nix
+sed -i "/yarnOfflineCache = fetchYarnDeps {/,/};/ s|hash = \"sha256-[^\"]*\"|hash = \"$new_yarn_hash\"|" package.nix
 
 echo ""
 echo "Updated package.nix to version $new_version"
-echo "Note: You may need to update yarnOfflineCache hash manually if yarn.lock changed"
-echo ""
-echo "To update yarn hash, run:"
-echo "  nix build .#xen-orchestra-ce 2>&1 | grep 'got:'"
+echo "  src.hash: $new_hash"
+echo "  yarnOfflineCache.hash: $new_yarn_hash"
