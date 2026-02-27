@@ -6,33 +6,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-## [1.1.0] - 2026-02-27
+## [v6.2.0] - 2026-02-27
 
 ### Changed
-- Updated xen-orchestra-ce package to 6.2.0 with refreshed source and yarn offline cache hashes.
-- Updated pinned `libvhdi` flake input to latest tracked revision.
-- Refactored package layout for submission prep:
-  - moved package definition to top-level `default.nix`
-  - moved helper tools to `scripts/`
-- Updated GitHub and Forgejo update workflows to operate on `default.nix` and use current repository paths.
-- Refreshed README and docs to match the current flake outputs and package structure.
+- Updated xen-orchestra-ce packaging to `6.2.0` and refreshed source/yarn hashes for reproducible builds.
+- Refreshed flake inputs and lock state (including `nixpkgs`/`libvhdi`) and removed the legacy in-repo `libvhdi` package copy.
+- Improved update automation to use `scripts/update.sh` and update both source and yarn cache hashes.
+- Refactored repository layout for nixpkgs submission readiness (`default.nix` at repo root, helper tooling under `scripts/`).
+- Refreshed README and docs to match current flake outputs and package structure.
 
 ### Fixed
 - Added TypeScript compatibility patching for `xo-server-openmetrics` build path.
 - Corrected stale package metadata comments and removed placeholder maintainer comment block.
 
-## [1.0.0] - 2026-01-10
+## [v6.1.1] - 2026-01-10
 
-### Added
-- Initial repository structure for nixpkgs submission.
-- xen-orchestra-ce package with Yarn v1 deterministic builds.
-- libvhdi package integration.
-- Documentation set (README, submission, development, testing).
-- CI workflows for checks and package builds.
-- VERSION-SYNC.md for core/standalone tracking.
+This release updates Xen Orchestra packaging and refreshes libvhdi integration.
 
-[Unreleased]: https://codeberg.org/NiXOA/xen-orchestra-ce
-[1.1.0]: https://codeberg.org/NiXOA/xen-orchestra-ce/releases/tag/v1.1.0
-[1.0.0]: https://codeberg.org/NiXOA/xen-orchestra-ce/releases/tag/v1.0.0
+### Highlights
+- Updated Xen Orchestra package to `6.1.1`.
+- Updated `libvhdi` packaging to the latest upstream version.
+- Added `AGENTS.md` guidance for LLM-assisted workflows.
+- Included CI workflow examples for monitoring upstream XO release updates.
+
+### Notable commits
+- 6468ffa: updated libvhdi to latest version
+- 91c0b79: updated to 6.1.1
+- a131725: added Agents.md to assist with LLM tools
+
+### Notes
+- Verified `yarnOfflineCache.hash` after source bumps to `yarn.lock` changes.

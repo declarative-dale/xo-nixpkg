@@ -17,3 +17,10 @@ Thumbs.db
 
 # Build artifacts
 *.log
+
+# AI assistant artifacts
+AGENTS.md
+CLAUDE.md
+.claude/
+.aider*
+.cursor/
