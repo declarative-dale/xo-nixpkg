@@ -1,12 +1,33 @@
 {
   "nodes": {
+    "libvhdi": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1772165901,
+        "narHash": "sha256-loQh3kK9QTFzfDDlGqYxrfproI9gDbogbrRzfI//9Z8=",
+        "ref": "refs/tags/latest",
+        "rev": "05427308ad8416fe3edb20e6f9681ba031bec1c0",
+        "revCount": 7,
+        "type": "git",
+        "url": "https://codeberg.org/NiXOA/libvhdi.git"
+      },
+      "original": {
+        "ref": "refs/tags/latest",
+        "type": "git",
+        "url": "https://codeberg.org/NiXOA/libvhdi.git"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1768564909,
-        "narHash": "sha256-Kell/SpJYVkHWMvnhqJz/8DqQg2b6PguxVWOuadbHCc=",
+        "lastModified": 1771848320,
+        "narHash": "sha256-0MAd+0mun3K/Ns8JATeHT1sX28faLII5hVLq0L3BdZU=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "e4bae1bd10c9c57b2cf517953ab70060a828ee6f",
+        "rev": "2fc6539b481e1d2569f25f8799236694180c0993",
         "type": "github"
       },
       "original": {
@@ -18,6 +39,7 @@
     },
     "root": {
       "inputs": {
+        "libvhdi": "libvhdi",
         "nixpkgs": "nixpkgs"
       }
     }

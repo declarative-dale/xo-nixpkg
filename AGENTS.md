@@ -1,30 +1,32 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This repository packages Xen Orchestra CE and libvhdi for Nix and is structured for nixpkgs submission. Package definitions live in `xen-orchestra-ce/package.nix` and `libvhdi/package.nix`. Update helpers are in `xen-orchestra-ce/update.sh` and `libvhdi/update.sh`. Flake wiring and dev tooling are in `flake.nix`/`flake.lock`. Supporting docs are under `docs/`, with examples in `examples/`.
+This repository packages Xen Orchestra CE and libvhdi for Nix and is structured for nixpkgs submission. The Xen Orchestra package definition lives in `default.nix`, helper scripts live under `scripts/` (`scripts/update.sh`, `scripts/yarn-chmod-sanitize.js`), and flake wiring is in `flake.nix`/`flake.lock`. Supporting docs are under `docs/`, with examples in `examples/`.
 
 ## Build, Test, and Development Commands
-- `nix develop`: Enter the dev shell with tooling.
-- `nix build .#xen-orchestra-ce` / `nix build .#libvhdi`: Build packages with flake inputs (development mode).
-- `nix build .#xen-orchestra-ce-nixpkgs-test` / `nix build .#libvhdi-nixpkgs-test`: Nixpkgs-style build verification (update hashes first).
-- `nix flake check`: Run flake checks.
-- `./xen-orchestra-ce/update.sh` / `./libvhdi/update.sh`: Refresh upstream versions and hashes.
+- `nix develop`: Enter the dev shell.
+- `nix build .#xen-orchestra-ce`: Build Xen Orchestra CE.
+- `nix build .#libvhdi`: Build libvhdi (from flake input).
+- `nix flake check --all-systems --no-build`: Evaluate all declared outputs for both supported systems.
+- `./scripts/update.sh`: Refresh Xen Orchestra version, source hash, and yarn offline cache hash in `default.nix`.
+- `nix flake lock --update-input libvhdi`: Update the pinned libvhdi input.
 
 ## Coding Style & Naming Conventions
 - Nix files use 2-space indentation and nixpkgs-style attribute naming.
-- Keep `package.nix` pure (no flake-specific logic); flake overrides belong in `flake.nix`.
-- Use clear, scoped filenames: `xen-orchestra-ce/package.nix`, `libvhdi/package.nix`.
+- Keep `default.nix` pure and submission-oriented.
+- Keep package logic in `default.nix` and auxiliary tooling under `scripts/`.
 
 ## Testing Guidelines
-- Validate with `nix flake check` and a build of the target package.
+- Validate with `nix flake check --all-systems --no-build`.
+- Build target packages before opening PRs.
 - Smoke-test binaries after building:
   - `./result/bin/xo-server --help`
   - `./result/bin/vhdiinfo --version`
 
 ## Commit & Pull Request Guidelines
 - Prefer short, descriptive commit messages (package scope first, then intent).
-- PRs should describe version bumps, include new hashes, and link any upstream release or commit references.
+- PRs should describe version bumps, include updated hashes, and link relevant upstream commits.
 
 ## Sync & Submission Notes
-- This repo is synced with NiXOA core; keep `VERSION-SYNC.md` updated when syncing changes.
-- Ensure nixpkgs-test builds pass before proposing upstream submissions.
+- This repo is synced with NiXOA core; keep `VERSION-SYNC.md` current when syncing.
+- Ensure docs and workflows match the current package layout before submission.

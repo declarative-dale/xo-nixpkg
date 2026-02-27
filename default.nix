@@ -22,24 +22,24 @@
 let
   # Helper script to sanitize chmod calls that fail in Nix sandbox
   # Some npm packages ship files with setuid/setgid bits which cause EPERM
-  yarnChmodSanitize = ./yarn-chmod-sanitize.js;
+  yarnChmodSanitize = ./scripts/yarn-chmod-sanitize.js;
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "xen-orchestra-ce";
-  version = "6.1.1";
+  version = "6.2.0";
 
   # Xen Orchestra doesn't use git tags for releases; versions are indicated
-  # in commit messages. This commit corresponds to "feat: release 6.0.3".
+  # in commit messages. This commit corresponds to "feat: release 6.2.0".
   src = fetchFromGitHub {
     owner = "vatesfr";
     repo = "xen-orchestra";
-    rev = "91c5d98489b5981917ca0aabc28ac37acd448396";
-    hash = "sha256-EfHMFNdV8+WApDJiy6wyUv38pvlV2HHmqegOe8NUReM=";
+    rev = "d25d15efd71d9f4895520dc35a2888270f2ac2e3";
+    hash = "sha256-ErYWrGeYccByvb6755Yusvd4YBdqEAFqVbU5FnqzSS4=";
   };
 
   yarnOfflineCache = fetchYarnDeps {
     yarnLock = "${finalAttrs.src}/yarn.lock";
-    hash = "sha256-nxvrqgMHUr3kYz7fcHd9Gdw5iy8EB2QjuOi1tkuLo3s=";
+    hash = "sha256-BLYn6YbkVwtjSjlcEsCiP3j31cb5r2uA21S1ypNLsdE=";
   };
 
   nativeBuildInputs = [
@@ -195,7 +195,7 @@ stdenv.mkDerivation (finalAttrs: {
     find "$out/libexec/xen-orchestra" -xtype l -delete || true
   '';
 
-  passthru.updateScript = ./update.sh;
+  passthru.updateScript = ./scripts/update.sh;
 
   meta = {
     description = "Web interface for Xen Orchestra - XenServer/XCP-ng management";
@@ -209,8 +209,11 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://xen-orchestra.com";
     changelog = "https://github.com/vatesfr/xen-orchestra/commits/master";
     license = lib.licenses.agpl3Only;
-    maintainers = with lib.maintainers; [
-      # Add maintainer here
+    maintainers = [
+      {
+        name = "Dale Morgan";
+        email = "mail@dalemorgan.us";
+      }
     ];
     platforms = lib.platforms.linux;
     mainProgram = "xo-server";
