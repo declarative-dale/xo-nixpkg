@@ -22,14 +22,14 @@
 let
   # Helper script to sanitize chmod calls that fail in Nix sandbox
   # Some npm packages ship files with setuid/setgid bits which cause EPERM
-  yarnChmodSanitize = ./yarn-chmod-sanitize.js;
+  yarnChmodSanitize = ./scripts/yarn-chmod-sanitize.js;
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "xen-orchestra-ce";
   version = "6.2.0";
 
   # Xen Orchestra doesn't use git tags for releases; versions are indicated
-  # in commit messages. This commit corresponds to "feat: release 6.0.3".
+  # in commit messages. This commit corresponds to "feat: release 6.2.0".
   src = fetchFromGitHub {
     owner = "vatesfr";
     repo = "xen-orchestra";
@@ -195,7 +195,7 @@ stdenv.mkDerivation (finalAttrs: {
     find "$out/libexec/xen-orchestra" -xtype l -delete || true
   '';
 
-  passthru.updateScript = ./update.sh;
+  passthru.updateScript = ./scripts/update.sh;
 
   meta = {
     description = "Web interface for Xen Orchestra - XenServer/XCP-ng management";
@@ -209,8 +209,11 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://xen-orchestra.com";
     changelog = "https://github.com/vatesfr/xen-orchestra/commits/master";
     license = lib.licenses.agpl3Only;
-    maintainers = with lib.maintainers; [
-      # Add maintainer here
+    maintainers = [
+      {
+        name = "Dale Morgan";
+        email = "mail@dalemorgan.us";
+      }
     ];
     platforms = lib.platforms.linux;
     mainProgram = "xo-server";

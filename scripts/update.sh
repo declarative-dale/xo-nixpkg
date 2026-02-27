@@ -6,7 +6,8 @@ set -euo pipefail
 # Xen Orchestra doesn't use git tags. Versions are indicated in commit messages
 # like "feat: release 6.0.3". This script searches recent commits for version bumps.
 
-cd "$(dirname "$0")"
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$repo_root"
 
 echo "Searching for latest version commit in xen-orchestra..."
 
@@ -76,13 +77,13 @@ fi
 
 echo "New yarn hash: $new_yarn_hash"
 
-# Update package.nix
-sed -i "s/version = \"[^\"]*\"/version = \"$new_version\"/" package.nix
-sed -i "s/rev = \"[a-f0-9]*\"/rev = \"$commit_sha\"/" package.nix
-sed -i "/src = fetchFromGitHub {/,/};/ s|hash = \"[^\"]*\"|hash = \"$new_hash\"|" package.nix
-sed -i "/yarnOfflineCache = fetchYarnDeps {/,/};/ s|hash = \"[^\"]*\"|hash = \"$new_yarn_hash\"|" package.nix
+# Update default.nix
+sed -i "s/version = \"[^\"]*\"/version = \"$new_version\"/" default.nix
+sed -i "s/rev = \"[a-f0-9]*\"/rev = \"$commit_sha\"/" default.nix
+sed -i "/src = fetchFromGitHub {/,/};/ s|hash = \"[^\"]*\"|hash = \"$new_hash\"|" default.nix
+sed -i "/yarnOfflineCache = fetchYarnDeps {/,/};/ s|hash = \"[^\"]*\"|hash = \"$new_yarn_hash\"|" default.nix
 
 echo ""
-echo "Updated package.nix to version $new_version"
+echo "Updated default.nix to version $new_version"
 echo "  src.hash: $new_hash"
 echo "  yarnOfflineCache.hash: $new_yarn_hash"

@@ -3,9 +3,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, beta ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, beta ]
   workflow_dispatch:
 
 jobs:
@@ -39,7 +39,7 @@ jobs:
       - name: Test binary execution
         run: |
           if [ "${{ matrix.package }}" = "xen-orchestra-ce" ]; then
-            ./result/bin/xo-server --help || echo "xo-server help output (may require config)"
+            ./result/bin/xo-server --help || echo "xo-server help output (may require runtime config)"
           elif [ "${{ matrix.package }}" = "libvhdi" ]; then
             ./result/bin/vhdiinfo --version
             ./result/bin/vhdimount --version
@@ -59,24 +59,3 @@ jobs:
 
       - name: Run flake checks
         run: nix flake check -L
-
-  # Nixpkgs-test builds (uncomment when hashes are updated)
-  # nixpkgs-test:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       package:
-  #         - xen-orchestra-ce-nixpkgs-test
-  #         - libvhdi-nixpkgs-test
-  #
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Install Nix
-  #       uses: cachix/install-nix-action@v27
-  #       with:
-  #         nix_path: nixpkgs=channel:nixos-unstable
-  #
-  #     - name: Build ${{ matrix.package }}
-  #       run: nix build .#${{ matrix.package }} -L

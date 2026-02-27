@@ -6,7 +6,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    xo-ce-nix.url = "github:YOUR-USER/xen-orchestra-ce-nix";
+    xo-ce-nix.url = "git+ssh://git@codeberg.org/NiXOA/xen-orchestra-ce.git";
   };
 
   outputs =

@@ -29,7 +29,7 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
-          xen-orchestra-ce = pkgs.callPackage ./xen-orchestra-ce/package.nix { };
+          xen-orchestra-ce = pkgs.callPackage ./default.nix { };
           libvhdi = libvhdi.packages.${system}.libvhdi;
           default = self.packages.${system}.xen-orchestra-ce;
         }
@@ -58,9 +58,11 @@
               echo "  nix build .#xen-orchestra-ce"
               echo "  nix build .#libvhdi"
               echo ""
-              echo "Update source hashes:"
-              echo "  nix-prefetch-github vatesfr xen-orchestra --rev v<version>"
-              echo "  nix-prefetch-url https://github.com/libyal/libvhdi/releases/download/<version>/libvhdi-alpha-<version>.tar.gz"
+              echo "Update xen-orchestra-ce:"
+              echo "  ./scripts/update.sh"
+              echo ""
+              echo "Update libvhdi input:"
+              echo "  nix flake lock --update-input libvhdi"
             '';
           };
         }
