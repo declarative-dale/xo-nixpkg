@@ -34,12 +34,12 @@ stdenv.mkDerivation (finalAttrs: {
     owner = "vatesfr";
     repo = "xen-orchestra";
     rev = "d25d15efd71d9f4895520dc35a2888270f2ac2e3";
-    hash = "sha256-ErYWrGeYccByvb6755Yusvd4YBdqEAFqVbU5FnqzSS4=";
+    hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAA";
   };
 
   yarnOfflineCache = fetchYarnDeps {
     yarnLock = "${finalAttrs.src}/yarn.lock";
-    hash = "sha256-BLYn6YbkVwtjSjlcEsCiP3j31cb5r2uA21S1ypNLsdE=";
+    hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAA";
   };
 
   nativeBuildInputs = [
