@@ -1,5 +1,26 @@
 {
   "nodes": {
+    "libvhdi": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1772165901,
+        "narHash": "sha256-loQh3kK9QTFzfDDlGqYxrfproI9gDbogbrRzfI//9Z8=",
+        "ref": "refs/tags/latest",
+        "rev": "05427308ad8416fe3edb20e6f9681ba031bec1c0",
+        "revCount": 7,
+        "type": "git",
+        "url": "https://codeberg.org/NiXOA/libvhdi.git"
+      },
+      "original": {
+        "ref": "refs/tags/latest",
+        "type": "git",
+        "url": "https://codeberg.org/NiXOA/libvhdi.git"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1771848320,
@@ -18,6 +39,7 @@
     },
     "root": {
       "inputs": {
+        "libvhdi": "libvhdi",
         "nixpkgs": "nixpkgs"
       }
     }

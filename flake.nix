@@ -3,10 +3,18 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    libvhdi = {
+      url = "git+https://codeberg.org/NiXOA/libvhdi.git?ref=refs/tags/latest";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    { self, nixpkgs }:
+    {
+      self,
+      nixpkgs,
+      libvhdi,
+    }:
     let
       supportedSystems = [
         "x86_64-linux"
@@ -22,7 +30,7 @@
         in
         {
           xen-orchestra-ce = pkgs.callPackage ./xen-orchestra-ce/package.nix { };
-          libvhdi = pkgs.callPackage ./libvhdi/package.nix { };
+          libvhdi = libvhdi.packages.${system}.libvhdi;
           default = self.packages.${system}.xen-orchestra-ce;
         }
       );
