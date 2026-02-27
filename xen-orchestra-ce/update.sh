@@ -79,8 +79,8 @@ echo "New yarn hash: $new_yarn_hash"
 # Update package.nix
 sed -i "s/version = \"[^\"]*\"/version = \"$new_version\"/" package.nix
 sed -i "s/rev = \"[a-f0-9]*\"/rev = \"$commit_sha\"/" package.nix
-sed -i "/src = fetchFromGitHub {/,/};/ s|hash = \"sha256-[^\"]*\"|hash = \"$new_hash\"|" package.nix
-sed -i "/yarnOfflineCache = fetchYarnDeps {/,/};/ s|hash = \"sha256-[^\"]*\"|hash = \"$new_yarn_hash\"|" package.nix
+sed -i "/src = fetchFromGitHub {/,/};/ s|hash = \"[^\"]*\"|hash = \"$new_hash\"|" package.nix
+sed -i "/yarnOfflineCache = fetchYarnDeps {/,/};/ s|hash = \"[^\"]*\"|hash = \"$new_yarn_hash\"|" package.nix
 
 echo ""
 echo "Updated package.nix to version $new_version"
