@@ -26,15 +26,15 @@ let
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "xen-orchestra-ce";
-  version = "6.2.1";
+  version = "6.2.2";
 
   # Xen Orchestra doesn't use git tags for releases; versions are indicated
   # in commit messages. This commit corresponds to "feat: release 6.2.0".
   src = fetchFromGitHub {
     owner = "vatesfr";
     repo = "xen-orchestra";
-    rev = "c6172b7b74d7a6f872189eeeb405daa5bd65824a";
-    hash = "sha256-63huQ20vIAiaxLMi3VOgZfP8f3GGBYTejIvvPHF/A0I=";
+    rev = "5bdd76a95546265f19fa16e30d6076659492ef19";
+    hash = "sha256-ayyaa/0bWR/Ze5ZV/JJjY6vZ7umWh0+VhWCGE14fyT4=";
   };
 
   yarnOfflineCache = fetchYarnDeps {
