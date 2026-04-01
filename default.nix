@@ -29,7 +29,7 @@ stdenv.mkDerivation (finalAttrs: {
   version = "6.2.2";
 
   # Xen Orchestra doesn't use git tags for releases; versions are indicated
-  # in commit messages. This commit corresponds to "feat: release XO 6.2.2".
+  # in commit messages like "feat: release XO 6.3.1 (#9665)".
   src = fetchFromGitHub {
     owner = "vatesfr";
     repo = "xen-orchestra";
