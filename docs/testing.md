@@ -26,9 +26,8 @@ nix build .#xen-orchestra-ce
 
 ```bash
 nix build .#libvhdi
-./result/bin/vhdiinfo --version
-./result/bin/vhdimount --version
-./result/bin/vhdiexport --version
+./result/bin/vhdiinfo -V
+./result/bin/vhdimount -V
 ```
 
 ## Submission-Oriented Checks

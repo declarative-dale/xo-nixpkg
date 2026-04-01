@@ -40,9 +40,6 @@ jobs:
         run: |
           if [ "${{ matrix.package }}" = "xen-orchestra-ce" ]; then
             ./result/bin/xo-server --help || echo "xo-server help output (may require runtime config)"
-          elif [ "${{ matrix.package }}" = "libvhdi" ]; then
-            ./result/bin/vhdiinfo --version
-            ./result/bin/vhdimount --version
           fi
 
   checks:

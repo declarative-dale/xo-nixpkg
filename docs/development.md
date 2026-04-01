@@ -55,7 +55,7 @@ nix build .#xen-orchestra-ce
 
 # Smoke test libvhdi binary
 nix build .#libvhdi
-./result/bin/vhdiinfo --version
+./result/bin/vhdiinfo -V
 ```
 
 ## Syncing with NiXOA Core

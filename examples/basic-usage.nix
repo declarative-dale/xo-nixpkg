@@ -65,7 +65,7 @@
               users.groups.xo = { };
 
               # Example: Using libvhdi tools
-              # The libvhdi package provides vhdiinfo, vhdimount, and vhdiexport
+              # The libvhdi package provides vhdiinfo and vhdimount
               # These are available in the system PATH when the package is installed
             }
           )
