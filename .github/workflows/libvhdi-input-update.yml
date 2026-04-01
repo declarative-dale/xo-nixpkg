@@ -69,13 +69,24 @@ jobs:
           }}."
           echo "Validation succeeded and no pull request was created."
 
+      - name: Create GitHub App token
+        id: app_token
+        if: steps.detect.outputs.update_available == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
+        continue-on-error: true
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.UPDATE_GITHUB_APP_ID }}
+          private-key: ${{ secrets.UPDATE_GITHUB_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Create Pull Request
         id: create_pr
-        if: steps.detect.outputs.update_available == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
+        if: steps.detect.outputs.update_available == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') && steps.app_token.outcome == 'success'
         continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.UPDATE_PR_PAT }}
+          token: ${{ steps.app_token.outputs.token }}
           commit-message: "libvhdi: update flake input to ${{ steps.detect.outputs.short_rev }}"
           title: "libvhdi: update flake input to ${{ steps.detect.outputs.short_rev }}"
           body: |
@@ -102,7 +113,14 @@ jobs:
           compare_url="https://github.com/${{ github.repository }}/compare/main...${branch_name}?expand=1"
           pull_url="https://github.com/${{ github.repository }}/pull/new/${branch_name}"
 
-          if [ "${{ steps.create_pr.outcome }}" = "success" ]; then
+          if [ "${{ steps.app_token.outcome }}" != "success" ]; then
+            echo "GitHub App token creation failed." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Configure the GitHub App credentials before rerunning this workflow:" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Variable: \`UPDATE_GITHUB_APP_ID\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Secret: \`UPDATE_GITHUB_APP_PRIVATE_KEY\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::GitHub App token creation failed. Verify UPDATE_GITHUB_APP_ID, UPDATE_GITHUB_APP_PRIVATE_KEY, and the app installation."
+          elif [ "${{ steps.create_pr.outcome }}" = "success" ]; then
             echo "Automated pull request step succeeded." >> "$GITHUB_STEP_SUMMARY"
             if [ -n "${{ steps.create_pr.outputs.pull-request-url }}" ]; then
               echo "" >> "$GITHUB_STEP_SUMMARY"
