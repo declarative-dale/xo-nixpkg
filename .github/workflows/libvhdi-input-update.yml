@@ -75,7 +75,7 @@ jobs:
         continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.UPDATE_PR_PAT }}
           commit-message: "libvhdi: update flake input to ${{ steps.detect.outputs.short_rev }}"
           title: "libvhdi: update flake input to ${{ steps.detect.outputs.short_rev }}"
           body: |

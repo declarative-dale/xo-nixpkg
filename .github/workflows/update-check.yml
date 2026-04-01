@@ -82,7 +82,7 @@ jobs:
         continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.UPDATE_PR_PAT }}
           commit-message: "xen-orchestra-ce: update to ${{ steps.detect.outputs.new_version }}"
           title: "xen-orchestra-ce: update to ${{ steps.detect.outputs.new_version }}"
           body: |
