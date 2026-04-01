@@ -57,6 +57,7 @@ jobs:
           echo "update_available=true" >> "$GITHUB_OUTPUT"
           echo "new_version=$new_version" >> "$GITHUB_OUTPUT"
           echo "new_rev=$new_rev" >> "$GITHUB_OUTPUT"
+          echo "branch_name=update/xen-orchestra-ce-$new_version" >> "$GITHUB_OUTPUT"
 
       - name: Validate updated package
         if: steps.detect.outputs.update_available == 'true'
@@ -76,7 +77,9 @@ jobs:
           done
 
       - name: Create Pull Request
+        id: create_pr
         if: steps.detect.outputs.update_available == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -96,10 +99,34 @@ jobs:
             Validation:
             - `nix build .#xen-orchestra-ce -L`
             - built outputs will be pushed to Cachix when `CACHIX_CACHE_NAME` and `CACHIX_AUTH_TOKEN` are configured
-          branch: update/xen-orchestra-ce-${{ steps.detect.outputs.new_version }}
+          branch: ${{ steps.detect.outputs.branch_name }}
           add-paths: |
             default.nix
           delete-branch: true
+
+      - name: Report PR result
+        if: steps.detect.outputs.update_available == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
+        run: |
+          branch_name="${{ steps.detect.outputs.branch_name }}"
+          compare_url="https://github.com/${{ github.repository }}/compare/main...${branch_name}?expand=1"
+          pull_url="https://github.com/${{ github.repository }}/pull/new/${branch_name}"
+
+          if [ "${{ steps.create_pr.outcome }}" = "success" ]; then
+            echo "Automated pull request step succeeded." >> "$GITHUB_STEP_SUMMARY"
+            if [ -n "${{ steps.create_pr.outputs.pull-request-url }}" ]; then
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "Pull request: ${{ steps.create_pr.outputs.pull-request-url }}" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "Automated pull request creation is not permitted in this repository." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "The update branch was pushed successfully and is ready for manual review." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Branch: \`${branch_name}\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Open PR: ${pull_url}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Compare diff: ${compare_url}" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Automatic pull request creation was blocked. Open a PR manually from ${pull_url}"
+          fi
 
       - name: Report dry run result
         if: steps.detect.outputs.update_available == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
