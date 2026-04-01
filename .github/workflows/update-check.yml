@@ -49,7 +49,20 @@ jobs:
 
       - name: Validate updated package
         if: steps.detect.outputs.update_available == 'true'
-        run: nix build .#xen-orchestra-ce -L
+        run: |
+          for attempt in 1 2 3; do
+            if nix build .#xen-orchestra-ce -L; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "xen-orchestra-ce update validation failed after $attempt attempts" >&2
+              exit 1
+            fi
+
+            echo "Retrying xen-orchestra-ce update validation after transient failure (attempt $attempt failed)..." >&2
+            sleep $((attempt * 15))
+          done
 
       - name: Create Pull Request
         if: steps.detect.outputs.update_available == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')

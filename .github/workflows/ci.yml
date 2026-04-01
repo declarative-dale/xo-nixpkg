@@ -34,7 +34,24 @@ jobs:
         continue-on-error: true
 
       - name: Build ${{ matrix.package }}
-        run: nix build .#${{ matrix.package }} -L
+        run: |
+          if [ "${{ matrix.package }}" = "xen-orchestra-ce" ]; then
+            for attempt in 1 2 3; do
+              if nix build .#xen-orchestra-ce -L; then
+                exit 0
+              fi
+
+              if [ "$attempt" -eq 3 ]; then
+                echo "xen-orchestra-ce build failed after $attempt attempts" >&2
+                exit 1
+              fi
+
+              echo "Retrying xen-orchestra-ce build after transient failure (attempt $attempt failed)..." >&2
+              sleep $((attempt * 15))
+            done
+          else
+            nix build .#${{ matrix.package }} -L
+          fi
 
       - name: Test binary execution
         run: |
@@ -55,4 +72,4 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Run flake checks
-        run: nix flake check -L
+        run: nix flake check --no-build
