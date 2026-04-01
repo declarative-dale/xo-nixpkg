@@ -1,0 +1,81 @@
+name: Check for libvhdi input updates
+
+on:
+  schedule:
+    - cron: '20 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run update detection and validation without creating a pull request"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Update libvhdi flake input
+        run: nix flake lock --update-input libvhdi
+
+      - name: Detect changes
+        id: detect
+        run: |
+          if git diff --quiet -- flake.lock; then
+            echo "update_available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          new_rev=$(jq -r '.nodes.libvhdi.locked.rev' flake.lock)
+          short_rev=$(printf '%s' "$new_rev" | cut -c1-7)
+
+          echo "update_available=true" >> "$GITHUB_OUTPUT"
+          echo "new_rev=$new_rev" >> "$GITHUB_OUTPUT"
+          echo "short_rev=$short_rev" >> "$GITHUB_OUTPUT"
+
+      - name: Validate updated libvhdi input
+        if: steps.detect.outputs.update_available == 'true'
+        run: nix build .#libvhdi -L
+
+      - name: Report dry run result
+        if: steps.detect.outputs.update_available == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        run: |
+          echo "Dry run detected an updated libvhdi input at ${{
+            steps.detect.outputs.new_rev
+          }}."
+          echo "Validation succeeded and no pull request was created."
+
+      - name: Create Pull Request
+        if: steps.detect.outputs.update_available == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "libvhdi: update flake input to ${{ steps.detect.outputs.short_rev }}"
+          title: "libvhdi: update flake input to ${{ steps.detect.outputs.short_rev }}"
+          body: |
+            Automated update to the `libvhdi` flake input.
+
+            Changes include:
+            - `flake.lock`
+
+            Locked revision:
+            - `NiXOA/libvhdi@${{ steps.detect.outputs.new_rev }}`
+
+            Validation:
+            - `nix build .#libvhdi -L`
+          branch: update/libvhdi-input-${{ steps.detect.outputs.short_rev }}
+          add-paths: |
+            flake.lock
+          delete-branch: true

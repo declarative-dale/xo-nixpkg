@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run update detection and validation without creating a pull request"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   check-update:
@@ -41,8 +47,12 @@ jobs:
           echo "new_version=$new_version" >> "$GITHUB_OUTPUT"
           echo "new_rev=$new_rev" >> "$GITHUB_OUTPUT"
 
-      - name: Create Pull Request
+      - name: Validate updated package
         if: steps.detect.outputs.update_available == 'true'
+        run: nix build .#xen-orchestra-ce -L
+
+      - name: Create Pull Request
+        if: steps.detect.outputs.update_available == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -58,7 +68,18 @@ jobs:
             - `yarnOfflineCache.hash`
 
             Upstream commit: vatesfr/xen-orchestra@${{ steps.detect.outputs.new_rev }}
+
+            Validation:
+            - `nix build .#xen-orchestra-ce -L`
           branch: update/xen-orchestra-ce-${{ steps.detect.outputs.new_version }}
           add-paths: |
             default.nix
           delete-branch: true
+
+      - name: Report dry run result
+        if: steps.detect.outputs.update_available == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        run: |
+          echo "Dry run detected an available xen-orchestra-ce update to ${{
+            steps.detect.outputs.new_version
+          }}."
+          echo "Validation succeeded and no pull request was created."
