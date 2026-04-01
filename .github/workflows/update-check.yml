@@ -27,6 +27,14 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
+      - name: Setup Cachix (optional)
+        if: vars.CACHIX_CACHE_NAME != '' && secrets.CACHIX_AUTH_TOKEN != ''
+        uses: cachix/cachix-action@v15
+        with:
+          name: ${{ vars.CACHIX_CACHE_NAME }}
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+        continue-on-error: true
+
       - name: Run updater script
         run: |
           chmod +x ./scripts/update.sh
@@ -84,6 +92,7 @@ jobs:
 
             Validation:
             - `nix build .#xen-orchestra-ce -L`
+            - built outputs will be pushed to Cachix when `CACHIX_CACHE_NAME` and `CACHIX_AUTH_TOKEN` are configured
           branch: update/xen-orchestra-ce-${{ steps.detect.outputs.new_version }}
           add-paths: |
             default.nix

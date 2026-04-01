@@ -27,9 +27,10 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Setup Cachix (optional)
+        if: vars.CACHIX_CACHE_NAME != '' && secrets.CACHIX_AUTH_TOKEN != ''
         uses: cachix/cachix-action@v15
         with:
-          name: your-cachix-cache
+          name: ${{ vars.CACHIX_CACHE_NAME }}
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
         continue-on-error: true
 
