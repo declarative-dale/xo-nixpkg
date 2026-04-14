@@ -4,8 +4,8 @@
 set -euo pipefail
 
 # Xen Orchestra doesn't use git tags. Versions are indicated in commit messages
-# like "feat: release XO 6.0.3 (#1234)". This script searches recent commits for
-# version bumps based on the first line of the commit message.
+# like "feat: release 6.3.3". This script searches recent commits for version
+# bumps based on the first line of the commit message.
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
@@ -14,7 +14,7 @@ echo "Searching for latest version commit in xen-orchestra..."
 
 # Get recent commits and find the latest version bump
 version_info=$(curl -fsSL "https://api.github.com/repos/vatesfr/xen-orchestra/commits?per_page=100" | \
-    jq -r '.[] | select((.commit.message | split("\n")[0]) | test("^feat: release XO [0-9]+(\\.[0-9]+)+")) | {sha: .sha, message: .commit.message} | @json' | \
+    jq -r '.[] | select((.commit.message | split("\n")[0]) | test("^feat: release [0-9]+(\\.[0-9]+)+")) | {sha: .sha, message: .commit.message} | @json' | \
     head -1)
 
 if [ -z "$version_info" ] || [ "$version_info" = "null" ]; then
@@ -25,7 +25,7 @@ fi
 commit_sha=$(echo "$version_info" | jq -r '.sha')
 commit_msg=$(echo "$version_info" | jq -r '.message')
 commit_subject=$(printf '%s\n' "$commit_msg" | sed -n '1p')
-new_version=$(printf '%s\n' "$commit_subject" | sed -nE 's/^feat: release XO ([0-9]+(\.[0-9]+)+).*/\1/p')
+new_version=$(printf '%s\n' "$commit_subject" | sed -nE 's/^feat: release ([0-9]+(\.[0-9]+)+).*/\1/p')
 
 if [ -z "$new_version" ]; then
     echo "Failed to extract version from commit message: $commit_subject" >&2
