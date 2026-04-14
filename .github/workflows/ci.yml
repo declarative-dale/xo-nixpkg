@@ -77,3 +77,113 @@ jobs:
 
       - name: Run flake checks
         run: nix flake check --no-build
+
+  tag-release:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create GitHub App token
+        id: app_token
+        continue-on-error: true
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.UPDATE_GITHUB_APP_ID }}
+          private-key: ${{ secrets.UPDATE_GITHUB_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Checkout repository
+        if: steps.app_token.outcome == 'success'
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app_token.outputs.token }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Detect version tag target
+        if: steps.app_token.outcome == 'success'
+        id: detect_tag
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          write_output() {
+            printf '%s\n' "$@" >> "$GITHUB_OUTPUT"
+          }
+
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            write_output "create_tag=false"
+            exit 0
+          fi
+
+          if ! git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" | grep -qx 'default.nix'; then
+            write_output "create_tag=false"
+            exit 0
+          fi
+
+          old_version=$(git show "$BEFORE_SHA:default.nix" | sed -n 's/.*version = "\([^"]*\)".*/\1/p' | head -n 1)
+          new_version=$(sed -n 's/.*version = "\([^"]*\)".*/\1/p' default.nix | head -n 1)
+
+          if [ -z "$new_version" ]; then
+            echo "Failed to extract version from default.nix at $AFTER_SHA" >&2
+            exit 1
+          fi
+
+          if ! printf '%s\n' "$new_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Expected semantic version in default.nix, got: $new_version" >&2
+            exit 1
+          fi
+
+          if [ "$old_version" = "$new_version" ]; then
+            write_output "create_tag=false"
+            exit 0
+          fi
+
+          tag_name="v$new_version"
+          if git rev-parse -q --verify "refs/tags/$tag_name" >/dev/null; then
+            existing_commit=$(git rev-list -n 1 "$tag_name")
+            if [ "$existing_commit" != "$AFTER_SHA" ]; then
+              echo "Tag $tag_name already exists at $existing_commit, expected $AFTER_SHA" >&2
+              exit 1
+            fi
+
+            write_output "create_tag=false"
+            exit 0
+          fi
+
+          write_output \
+            "create_tag=true" \
+            "tag_name=$tag_name" \
+            "version=$new_version"
+
+      - name: Create release tag
+        if: steps.detect_tag.outputs.create_tag == 'true'
+        env:
+          TAG_NAME: ${{ steps.detect_tag.outputs.tag_name }}
+          TARGET_COMMIT: ${{ github.sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG_NAME" "$TARGET_COMMIT"
+          git push origin "refs/tags/$TAG_NAME"
+
+      - name: Summarize tagging result
+        run: |
+          if [ "${{ steps.app_token.outcome }}" != "success" ]; then
+            {
+              echo "Automatic release tagging skipped because GitHub App token creation failed."
+              echo ""
+              echo "Configure the GitHub App credentials before rerunning this workflow:"
+              echo "- Variable: \`UPDATE_GITHUB_APP_ID\`"
+              echo "- Secret: \`UPDATE_GITHUB_APP_PRIVATE_KEY\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ steps.detect_tag.outputs.create_tag }}" = "true" ]; then
+            echo "Created release tag \`${{ steps.detect_tag.outputs.tag_name }}\` for commit \`${{ github.sha }}\`." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No new xen-orchestra-ce version tag was needed for this push." >> "$GITHUB_STEP_SUMMARY"
+          fi

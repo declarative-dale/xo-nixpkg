@@ -1,9 +1,9 @@
 name: Maintain release alias tags
 
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       tag_name:
@@ -38,12 +38,12 @@ jobs:
         env:
           DISPATCH_TAG_NAME: ${{ github.event.inputs.tag_name }}
           EVENT_NAME: ${{ github.event_name }}
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          PUSH_TAG_NAME: ${{ github.ref_name }}
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             source_tag="$DISPATCH_TAG_NAME"
           else
-            source_tag="$RELEASE_TAG_NAME"
+            source_tag="$PUSH_TAG_NAME"
           fi
 
           if ! printf '%s\n' "$source_tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -54,13 +54,16 @@ jobs:
           git fetch --force --tags origin
 
           source_commit=$(git rev-list -n 1 "$source_tag")
-          version_without_prefix=${source_tag#v}
-          source_major_minor=${version_without_prefix%.*}
           stable_tag=$(
-            git tag --list 'v*.*.*' --sort=-version:refname \
+            git tag --list 'v*.*.*' --sort=version:refname \
               | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
-              | grep -v "^v${source_major_minor}\." \
-              | head -n 1 || true
+              | awk -v source_tag="$source_tag" '
+                  $0 == source_tag {
+                    print previous_tag
+                    exit
+                  }
+                  { previous_tag = $0 }
+                ' || true
           )
 
           echo "source_tag=$source_tag" >> "$GITHUB_OUTPUT"
@@ -93,9 +96,11 @@ jobs:
 
       - name: Summarize alias targets
         run: |
-          echo "Updated release aliases." >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- latest -> \`${{ steps.resolve.outputs.source_tag }}\` (\`${{ steps.resolve.outputs.source_commit }}\`)" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "Updated release aliases."
+            echo ""
+            echo "- latest -> \`${{ steps.resolve.outputs.source_tag }}\` (\`${{ steps.resolve.outputs.source_commit }}\`)"
+          } >> "$GITHUB_STEP_SUMMARY"
           if [ -n "${{ steps.resolve.outputs.stable_tag }}" ]; then
             echo "- stable -> \`${{ steps.resolve.outputs.stable_tag }}\` (\`${{ steps.resolve.outputs.stable_commit }}\`)" >> "$GITHUB_STEP_SUMMARY"
           else
