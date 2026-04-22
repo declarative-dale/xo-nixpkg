@@ -1,5 +1,8 @@
 name: Check for libvhdi input updates
 
+env:
+  CACHIX_CACHE_NAME: xen-orchestra-ce
+
 on:
   schedule:
     - cron: '20 6 * * *'
@@ -28,9 +31,8 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Setup Cachix (optional)
-        if: env.CACHIX_CACHE_NAME != '' && env.CACHIX_AUTH_TOKEN != ''
+        if: env.CACHIX_AUTH_TOKEN != ''
         env:
-          CACHIX_CACHE_NAME: ${{ vars.CACHIX_CACHE_NAME }}
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         uses: cachix/cachix-action@v15
         with:
@@ -100,7 +102,7 @@ jobs:
 
             Validation:
             - `nix build .#libvhdi -L`
-            - built outputs will be pushed to Cachix when `CACHIX_CACHE_NAME` and `CACHIX_AUTH_TOKEN` are configured
+            - built outputs will be pushed to the `xen-orchestra-ce` Cachix cache when `CACHIX_AUTH_TOKEN` is configured
           branch: ${{ steps.detect.outputs.branch_name }}
           add-paths: |
             flake.lock
